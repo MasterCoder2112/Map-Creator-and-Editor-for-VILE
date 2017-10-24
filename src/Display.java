@@ -48,7 +48,7 @@ public class Display extends JFrame implements ActionListener
 {
 	private static final long serialVersionUID = 1L;
 	
-	private static final double versionNum = 1.5;
+	private static final double versionNum = 1.6;
 	
 	//For the 4 key bindings
 	private static Action leftAction;
@@ -80,6 +80,9 @@ public class Display extends JFrame implements ActionListener
 	private JTextField mapHeight;
 	private JTextField mapBrightness;
 	private JTextField itemActID;
+	private JTextField audioActivation;
+	private JTextField wallY;
+	private JTextField doorRaise;
 	//////////////////////////////////
 	
 	//JLabels ////////////////////////
@@ -97,6 +100,9 @@ public class Display extends JFrame implements ActionListener
 	private JLabel mapBrightnessTitle;
 	private JLabel mapFloorTitle;
 	private JLabel mapCeilingTitle;
+	private JLabel audioActivationTitle;
+	private JLabel wallYTitle;
+	private JLabel doorRaiseTitle;
 	//////////////////////////////////
 	
 	private MapBlock[][] map;
@@ -117,9 +123,17 @@ public class Display extends JFrame implements ActionListener
 	private JButton previousPage;
 	private JButton refreshMap;
 	private JButton undo;
-	private JButton mapFloor;
-	private JButton mapCeiling;
-	private JButton floorModeButton;
+	private JButton selectOption;
+	
+	//These are static to free up more memory for non-static
+	//objects
+	private static JButton mapFloor;
+	private static JButton mapCeiling;
+	private static JButton floorModeButton;
+	private static JButton scrollDown;
+	private static JButton scrollUp;
+	private static JButton scrollRight;
+	private static JButton scrollLeft;
 	//////////////////////////////////
 	
 	//Currently selected wall or entity ID
@@ -154,6 +168,7 @@ public class Display extends JFrame implements ActionListener
 	private int buttonSize = 50;
 	
 	private boolean floorMode = true;
+	private boolean selectMode = false;
 	
 	//Holds the past 100 actions in it so that the user can undo if
 	//needed
@@ -256,6 +271,7 @@ public class Display extends JFrame implements ActionListener
 		options.add(mapOptions);
 		options.setVisible(true);
 		this.setJMenuBar(options);
+		mapCreation.repaint();
 		
 		//Adds text fields
 		setUpTextfields();
@@ -275,6 +291,13 @@ public class Display extends JFrame implements ActionListener
 		String[] mapShown = shownMapSize.getText().split("x");
 		shownMapHeight = Integer.parseInt(mapShown[0]);
 		shownMapWidth = Integer.parseInt(mapShown[1]);
+		
+		if(mapMode == 2)
+		{
+			setUpFloorMode();
+		}
+		
+		mapCreation.repaint();
 	}
 
 	//Starts the display
@@ -461,6 +484,12 @@ public class Display extends JFrame implements ActionListener
 			mapCeilingTitle.setVisible(false);
 			heightTitle.setVisible(true);
 			height.setVisible(true);
+			audioActivation.setVisible(false);
+			doorRaise.setVisible(false);
+			wallY.setVisible(true);
+			audioActivationTitle.setVisible(false);
+			doorRaiseTitle.setVisible(false);
+			wallYTitle.setVisible(true);
 			
 			//Remove all floor buttons
 			for(int i = 0; i < floorTypes.length; i++)
@@ -516,6 +545,7 @@ public class Display extends JFrame implements ActionListener
 				previousPage.setVisible(true);
 			}
 			
+			//TODO jere
 			currentWall.setVisible(false);
 			currentEntity.setVisible(true);
 			itemRotation.setVisible(true);
@@ -541,6 +571,13 @@ public class Display extends JFrame implements ActionListener
 			mapCeilingTitle.setVisible(false);
 			heightTitle.setVisible(false);
 			height.setVisible(false);
+			audioActivation.setVisible(true);
+			doorRaise.setVisible(true);
+			wallY.setVisible(false);
+			audioActivationTitle.setVisible(true);
+			doorRaiseTitle.setVisible(true);
+			wallYTitle.setVisible(false);
+			
 					
 			//Remove all floor buttons
 			for(int i = 0; i < floorTypes.length; i++)
@@ -574,6 +611,22 @@ public class Display extends JFrame implements ActionListener
 		{
 			//Set up this mode
 			setUpFloorMode();
+			mapMode = 2;
+		}
+		
+		//If select mode was pressed
+		if(e.getSource() == selectOption)
+		{
+			if(selectMode)
+			{
+				selectMode = false;
+				selectOption.setText("Select Mode Off");
+			}
+			else
+			{
+				selectMode = true;
+				selectOption.setText("Select Mode On");
+			}
 		}
 		
 	   /*
@@ -715,6 +768,48 @@ public class Display extends JFrame implements ActionListener
 					entityTypes[i].setVisible(true);
 					mapCreation.repaint();
 				}
+			}
+		}
+		
+	   /*
+	    * Scrolls up one row and refreshes the map
+	    */
+		if(e.getSource() == scrollUp)
+		{
+			if(row > 0)
+			{
+				row--;
+				refreshMap();
+			}
+		}
+		
+		//Scrolls down one row and refreshes
+		if(e.getSource() ==  scrollDown)
+		{
+			if(row + shownMapHeight < map.length)
+			{
+				row++;
+				refreshMap();
+			}
+		}
+		
+		//Scrolls left and then refreshes
+		if(e.getSource() == scrollLeft)
+		{
+			if(column > 0)
+			{
+				column--;
+				refreshMap();
+			}
+		}
+		
+		//Scrolls right then refreshes
+		if(e.getSource() ==  scrollRight)
+		{
+			if(column + shownMapWidth < map[0].length)
+			{
+				column++;
+				refreshMap();
 			}
 		}
 	
@@ -872,198 +967,283 @@ public class Display extends JFrame implements ActionListener
 		{
 			for(int j = column; j < shownMapWidth + column; j++)
 			{
-				if(e.getSource() == map[i][j])
+				try
 				{
-				   /*
-				    * Create a new MapBlock that has no references to a
-				    * already existing object, then add it to the actions
-				    * arraylist as a previous version of the block.
-				    */
-					MapBlock temp = new MapBlock(i, j);
-					temp.blockHeight = map[i][j].blockHeight;
-					temp.blockID = map[i][j].blockID;
-					temp.itemID = map[i][j].itemID;
-					temp.itemButton = map[i][j].itemButton;
-					temp.heightLabel = map[i][j].heightLabel;
-					temp.wallTexture = map[i][j].wallTexture;
-					temp.entityTexture = map[i][j].entityTexture;
-					
-				   /*
-				    * See if the text is null, and if it is not, use the
-				    * value in it to set the rotation of the enemy. If it
-				    * is, then use the default value of 0 as the enemies
-				    * rotation.
-				    */
-					try
-					{					
-						//Which way enemy/item is looking
-						temp.itemRotation = 
-								Integer.parseInt(itemRotation.getText());
-					}
-					catch (Exception ex)
+					if(e.getSource() == map[i][j])
 					{
-						temp.setToolTipText
-						("Rotation: 0, Item Activation ID: "
-								+temp.itemActivationID);
-						
-						//Which way enemy/item is looking
-						temp.itemRotation = 0;
-					}
-					
-				   /*
-				    * See if the text is null, and if it is not, use the
-				    * value in it to set the activation ID of the item. If it
-				    * is, then use the default value of 0 as the items
-				    * activation ID.
-				    */
-					try
-					{					
-						temp.itemActivationID = 
-								Integer.parseInt(itemActID.getText());
-					}
-					catch (Exception ex)
-					{
-						temp.setToolTipText
-						("Rotation: "+temp.itemRotation+
-								", Item Activation ID: 0");
-
-						temp.itemActivationID = 0;
-					}
-					
-					//Make sure itemRotation is between 0 and 360
-					while(temp.itemRotation > 359)
-					{
-						temp.itemRotation -= 360;
-					}
-					
-					if(temp.itemRotation <= 0)
-					{
-						temp.itemRotation = 0;
-					}
-					
-					if(temp.itemActivationID <= 0)
-					{
-						temp.itemActivationID = 0;
-					}
-					
-					//If blank block, there is no rotation
-					if(temp.itemID == 0)
-					{
-						temp.itemRotation = 0;
-						temp.itemActivationID = 0;
-					}
-					
-					//Reset tool tip after checks
-					temp.setToolTipText
-					("Rotation: "+temp.itemRotation+
-							", Item Activation ID: "
-							+temp.itemActivationID);
-					
-					actions.add(temp);
-					
-					//If past 100 actions, start removing the first action
-					//each time a new action is committed.
-					if(actions.size() > 100)
-					{
-						actions.remove(0);
-					}
-					
-					//If wall mode, change wall type and hieght
-					if(mapMode == 0)
-					{
-						map[i][j].blockID = currentWallType;
-						map[i][j].blockHeight = 
-								Integer.parseInt(height.getText());
-						
-						if(map[i][j].blockID == 0)
+						if(selectMode)
 						{
-							map[i][j].blockHeight = 0;
-						}
-						
-						map[i][j].size = 0;
-						map[i][j].updateImage(buttonSize);
-						mapCreation.repaint();
-					}
-					//If entity mode, change blocks entitytype
-					else if(mapMode == 1)
-					{
-						map[i][j].itemID = currentEntityType;
-						map[i][j].size2 = 0;
-						map[i][j].updateItemImage(buttonSize);
-						
-					   /*
-					    * See if the text is null, and if it is not, use the
-					    * value in it to set the rotation of the enemy. If it
-					    * is, then use the default value of 0 as the enemies
-					    * rotation.
-					    */
-						try
-						{					
-							//Which way enemy/item is looking
-							map[i][j].itemRotation = 
-									Integer.parseInt(itemRotation.getText());
-						}
-						catch (Exception ex)
-						{
-							map[i][j].setToolTipText
-							("Rotation: 0, Item Activation ID: "
-									+map[i][j].itemActivationID);
+							//If wall mode, change wall type and height
+							if(mapMode == 0)
+							{
+								currentWallType = map[i][j].blockID;
+								height.setText(""+map[i][j].blockHeight);
+								wallY.setText(""+map[i][j].blockY);
+								
+								ImageIcon tempIcon = new ImageIcon
+										(filePath+"/walls/wall"+currentWallType+".png");
+								
+								//Resizes the Image to meet the size of the button
+								Image img = tempIcon.getImage() ;  
+								Image newimg = img.getScaledInstance
+										(50, 50, java.awt.Image.SCALE_SMOOTH) ;  
+								tempIcon = new ImageIcon(newimg);
+								currentWall.setIcon(tempIcon);
+								
+								mapCreation.repaint();
+							}
+							//If entity mode, change blocks entitytype
+							else if(mapMode == 1)
+							{
+								currentEntityType = map[i][j].itemID;
+								itemRotation.setText(""+map[i][j].itemRotation);
+								itemActID.setText(""+map[i][j].itemActivationID);
+								audioActivation.setText(map[i][j].audioQueue);
+								doorRaise.setText(""+map[i][j].doorRaiseHeight);
+								
+								ImageIcon tempIcon = new ImageIcon
+										(filePath+"/entities/item"+currentEntityType+".png");
+								
+								//Resizes the Image to meet the size of the button
+								Image img = tempIcon.getImage() ;  
+								Image newimg = img.getScaledInstance
+										(50, 50, java.awt.Image.SCALE_SMOOTH) ;  
+								tempIcon = new ImageIcon(newimg);
+								currentEntity.setIcon(tempIcon);
+							}
 							
-							//Which way enemy/item is looking
-							map[i][j].itemRotation = 0;
+							mapCreation.repaint();
 						}
-						
-					   /*
-					    * See if the text is null, and if it is not, use the
-					    * value in it to set the activation ID of the item. If it
-					    * is, then use the default value of 0 as the items
-					    * activation ID.
-					    */
-						try
-						{					
-							map[i][j].itemActivationID = 
-									Integer.parseInt(itemActID.getText());
-						}
-						catch (Exception ex)
+						else
 						{
-							map[i][j].setToolTipText
-							("Rotation: "+map[i][j].itemRotation+
-									", Item Activation ID: 0");
-
-							map[i][j].itemActivationID = 0;
+						   /*
+						    * Create a new MapBlock that has no references to a
+						    * already existing object, then add it to the actions
+						    * arraylist as a previous version of the block.
+						    */
+							MapBlock temp = new MapBlock(i, j);
+							temp.blockHeight = map[i][j].blockHeight;
+							temp.blockID = map[i][j].blockID;
+							temp.itemID = map[i][j].itemID;
+							temp.itemButton = map[i][j].itemButton;
+							temp.heightLabel = map[i][j].heightLabel;
+							temp.wallTexture = map[i][j].wallTexture;
+							temp.entityTexture = map[i][j].entityTexture;
+							temp.audioQueue = map[i][j].audioQueue;
+							temp.blockY = map[i][j].blockY;
+							temp.doorRaiseHeight = map[i][j].doorRaiseHeight;
+							temp.audioQueue = map[i][j].audioQueue;
+							
+						   /*
+						    * See if the text is null, and if it is not, use the
+						    * value in it to set the rotation of the enemy. If it
+						    * is, then use the default value of 0 as the enemies
+						    * rotation.
+						    */
+							try
+							{					
+								//Which way enemy/item is looking
+								temp.itemRotation = 
+										Integer.parseInt(itemRotation.getText());
+							}
+							catch (Exception ex)
+							{
+								temp.setToolTipText
+								("Rotation: 0, Item Activation ID: "
+										+temp.itemActivationID);
+								
+								//Which way enemy/item is looking
+								temp.itemRotation = 0;
+							}
+							
+						   /*
+						    * See if the text is null, and if it is not, use the
+						    * value in it to set the activation ID of the item. If it
+						    * is, then use the default value of 0 as the items
+						    * activation ID.
+						    */
+							try
+							{					
+								temp.itemActivationID = 
+										Integer.parseInt(itemActID.getText());
+							}
+							catch (Exception ex)
+							{
+								temp.setToolTipText
+								("Rotation: "+temp.itemRotation+
+										", Item Activation ID: 0");
+		
+								temp.itemActivationID = 0;
+							}
+							
+							//Make sure itemRotation is between 0 and 360
+							while(temp.itemRotation > 359)
+							{
+								temp.itemRotation -= 360;
+							}
+							
+							if(temp.itemRotation <= 0)
+							{
+								temp.itemRotation = 0;
+							}
+							
+							if(temp.itemActivationID <= 0)
+							{
+								temp.itemActivationID = 0;
+							}
+							
+							//If blank block, there is no rotation
+							if(temp.itemID == 0)
+							{
+								temp.itemRotation = 0;
+								temp.itemActivationID = 0;
+							}
+							
+							//Reset tool tip after checks
+							temp.setToolTipText
+							("Rotation: "+temp.itemRotation+
+									", Item Activation ID: "
+									+temp.itemActivationID);
+							
+							actions.add(temp);
+							
+							//If past 100 actions, start removing the first action
+							//each time a new action is committed.
+							if(actions.size() > 100)
+							{
+								actions.remove(0);
+							}
+							
+							//If wall mode, change wall type and height
+							if(mapMode == 0)
+							{
+								map[i][j].blockID = currentWallType;
+								map[i][j].blockHeight = 
+										Integer.parseInt(height.getText());
+								
+								try
+								{
+									map[i][j].blockY = Integer.parseInt(wallY.getText());
+								}
+								catch(Exception ex)
+								{
+									map[i][j].blockY = 0;
+								}
+								
+								if(map[i][j].blockID == 0)
+								{
+									map[i][j].blockHeight = 0;
+								}
+								
+								map[i][j].size = 0;
+								map[i][j].updateImage(buttonSize);			
+	
+								wallY.setText(""+map[i][j].blockY);
+								
+								mapCreation.repaint();
+							}
+							//If entity mode, change blocks entitytype
+							else if(mapMode == 1)
+							{
+								map[i][j].itemID = currentEntityType;
+								map[i][j].size2 = 0;
+								map[i][j].updateItemImage(buttonSize);
+								map[i][j].audioQueue = audioActivation.getText();
+								
+								try
+								{
+									map[i][j].doorRaiseHeight = 
+											Integer.parseInt(doorRaise.getText());
+								}
+								catch(Exception ex)
+								{
+									//If can't convert the text to integer form
+									//Then set doorRaiseHeight to default
+									map[i][j].doorRaiseHeight = 12;
+								}
+								
+							   /*
+							    * See if the text is null, and if it is not, use the
+							    * value in it to set the rotation of the enemy. If it
+							    * is, then use the default value of 0 as the enemies
+							    * rotation.
+							    */
+								try
+								{					
+									//Which way enemy/item is looking
+									map[i][j].itemRotation = 
+											Integer.parseInt(itemRotation.getText());
+								}
+								catch (Exception ex)
+								{
+									map[i][j].setToolTipText
+									("Rotation: 0, Item Activation ID: "
+											+map[i][j].itemActivationID);
+									
+									//Which way enemy/item is looking
+									map[i][j].itemRotation = 0;
+								}
+								
+							   /*
+							    * See if the text is null, and if it is not, use the
+							    * value in it to set the activation ID of the item. If it
+							    * is, then use the default value of 0 as the items
+							    * activation ID.
+							    */
+								try
+								{					
+									map[i][j].itemActivationID = 
+											Integer.parseInt(itemActID.getText());
+								}
+								catch (Exception ex)
+								{
+									map[i][j].setToolTipText
+									("Rotation: "+map[i][j].itemRotation+
+											", Item Activation ID: 0");
+		
+									map[i][j].itemActivationID = 0;
+								}
+								
+								//Make sure itemRotation is between 0 and 360
+								while(map[i][j].itemRotation > 359)
+								{
+									map[i][j].itemRotation -= 360;
+								}
+								
+								if(map[i][j].itemRotation <= 0)
+								{
+									map[i][j].itemRotation = 0;
+								}
+								
+								if(map[i][j].itemActivationID <= 0)
+								{
+									map[i][j].itemActivationID = 0;
+								}
+								
+								//If blank block, there is no rotation
+								if(map[i][j].itemID == 0)
+								{
+									map[i][j].itemRotation = 0;
+									map[i][j].itemActivationID = 0;
+								}
+								
+								//Reset tool tip after checks
+								map[i][j].setToolTipText
+								("Rotation: "+map[i][j].itemRotation+
+										", Item Activation ID: "
+										+map[i][j].itemActivationID);
+							}
+							
+							audioActivation.setText(map[i][j].audioQueue);
+							doorRaise.setText(""+map[i][j].doorRaiseHeight);	
+							
+							mapCreation.repaint();
 						}
-						
-						//Make sure itemRotation is between 0 and 360
-						while(map[i][j].itemRotation > 359)
-						{
-							map[i][j].itemRotation -= 360;
-						}
-						
-						if(map[i][j].itemRotation <= 0)
-						{
-							map[i][j].itemRotation = 0;
-						}
-						
-						if(map[i][j].itemActivationID <= 0)
-						{
-							map[i][j].itemActivationID = 0;
-						}
-						
-						//If blank block, there is no rotation
-						if(map[i][j].itemID == 0)
-						{
-							map[i][j].itemRotation = 0;
-							map[i][j].itemActivationID = 0;
-						}
-						
-						//Reset tool tip after checks
-						map[i][j].setToolTipText
-						("Rotation: "+map[i][j].itemRotation+
-								", Item Activation ID: "
-								+map[i][j].itemActivationID);
 					}
-					
-					mapCreation.repaint();
+				}
+				catch(Exception ex)
+				{
+					System.out.println(ex);
 				}
 			}
 		}
@@ -1272,9 +1452,30 @@ public class Display extends JFrame implements ActionListener
 		itemActID = new JTextField("");
 		itemActID.setEditable(true);
 		itemActID.setVisible(false);
-		itemActID.setBounds((this.getWidth() / 2) + 300, 
-				335, 100, 25);
+		itemActID.setBounds((this.getWidth() / 2) + 400, 
+				325, 100, 25);
 		mapCreation.add(itemActID);
+		
+		audioActivation = new JTextField("");
+		audioActivation.setBounds((this.getWidth() / 2) + 400, 
+				175, 100, 25);
+		audioActivation.setEditable(true);
+		audioActivation.setVisible(false);
+		mapCreation.add(audioActivation);
+		
+		wallY = new JTextField("");
+		wallY.setBounds((this.getWidth() / 2) + 400, 
+				175, 100, 25);
+		wallY.setVisible(false);
+		wallY.setEditable(true);
+		mapCreation.add(wallY);
+		
+		doorRaise = new JTextField("");
+		doorRaise.setBounds((this.getWidth() / 2) + 400, 
+				250, 100, 25);
+		doorRaise.setVisible(false);
+		doorRaise.setEditable(true);
+		mapCreation.add(doorRaise);
 	}
 	
    /**
@@ -1301,6 +1502,27 @@ public class Display extends JFrame implements ActionListener
 		heightTitle.setVisible(false);
 		heightTitle.setForeground(Color.GREEN);
 		mapCreation.add(heightTitle);
+		
+		audioActivationTitle = new JLabel("Audio Queue:");
+		audioActivationTitle.setBounds((this.getWidth() / 2) + 400, 
+				150, 100, 25);
+		audioActivationTitle.setVisible(false);
+		audioActivationTitle.setForeground(Color.GREEN);
+		mapCreation.add(audioActivationTitle);
+		
+		wallYTitle = new JLabel("Wall Y value:");
+		wallYTitle.setBounds((this.getWidth() / 2) + 400, 
+				150, 100, 25);
+		wallYTitle.setVisible(false);
+		wallYTitle.setForeground(Color.GREEN);
+		mapCreation.add(wallYTitle);
+		
+		doorRaiseTitle = new JLabel("Door Raise Height:");
+		doorRaiseTitle.setBounds((this.getWidth() / 2) + 400, 
+				225, 200, 25);
+		doorRaiseTitle.setVisible(false);
+		doorRaiseTitle.setForeground(Color.GREEN);
+		mapCreation.add(doorRaiseTitle);
 		
 		mapDimensionTitle = new JLabel("Map Dimensions:");
 		mapDimensionTitle.setBounds(this.getWidth() - 250, 
@@ -1359,7 +1581,7 @@ public class Display extends JFrame implements ActionListener
 		mapCreation.add(itemRotationTitle);
 		
 		itemActIDTitle = new JLabel("Item Activation ID:");
-		itemActIDTitle.setBounds((this.getWidth() / 2) + 300, 
+		itemActIDTitle.setBounds((this.getWidth() / 2) + 400, 
 				300, 200, 25);
 		itemActIDTitle.setVisible(false);
 		itemActIDTitle.setForeground(Color.GREEN);
@@ -1424,16 +1646,46 @@ public class Display extends JFrame implements ActionListener
 		mapCreation.add(previousPage);
 		
 		undo = new JButton("Undo");
-		undo.setBounds(this.getWidth() / 2, 
+		undo.setBounds((this.getWidth() / 2) + 100, 
 				15, 150, 50);
 		undo.addActionListener(this);
 		mapCreation.add(undo);
 		
+		scrollLeft = new JButton("Scroll Left");
+		scrollLeft.setBounds((this.getWidth() / 2) - 250, 
+				15, 150, 50);
+		scrollLeft.addActionListener(this);
+		mapCreation.add(scrollLeft);
+		
+		scrollRight = new JButton("Scroll Right");
+		scrollRight.setBounds((this.getWidth() / 2) - 100, 
+				15, 150, 50);
+		scrollRight.addActionListener(this);
+		mapCreation.add(scrollRight);
+		
+		scrollUp = new JButton("Scroll Up");
+		scrollUp.setBounds((this.getWidth() / 2) - 250, 
+				this.getHeight() - 115, 150, 50);
+		scrollUp.addActionListener(this);
+		mapCreation.add(scrollUp);
+		
+		scrollDown = new JButton("Scroll Down");
+		scrollDown.setBounds((this.getWidth() / 2) - 100, 
+				this.getHeight() - 115, 150, 50);
+		scrollDown.addActionListener(this);
+		mapCreation.add(scrollDown);
+		
 		refreshMap = new JButton("Refresh View");
-		refreshMap.setBounds(this.getWidth() / 2, 
+		refreshMap.setBounds((this.getWidth() / 2) + 100, 
 				this.getHeight() - 125, 150, 50);
 		refreshMap.addActionListener(this);
 		mapCreation.add(refreshMap);
+		
+		selectOption = new JButton("Select Mode Off");
+		selectOption.setBounds((this.getWidth() / 2) - 660, 
+				this.getHeight() - 115, 150, 50);
+		selectOption.addActionListener(this);
+		mapCreation.add(selectOption);
 		
 		if(wallPages == 0)
 		{
@@ -1477,7 +1729,7 @@ public class Display extends JFrame implements ActionListener
 		}
 		
 		tempIcon = new ImageIcon
-				(filePath+"/floors/floor"+currentWallType+".png");
+				(filePath+"/walls/wall"+currentWallType+".png");
 		
 		//Resizes the Image to meet the size of the button
 		Image img = tempIcon.getImage() ;  
@@ -1818,21 +2070,26 @@ public class Display extends JFrame implements ActionListener
 			String mapAudiotemp = mapAudio.getText();
 			String temp = "";
 			
+			//Give map number a random map number so it has no level
+			//before or after, if the map number doesn't exist
 			if(mapNumtemp == "")
 			{
 				mapNumtemp = "1001001";
 			}
 			
+			//default height is 200
 			if(mapHeighttemp == "")
 			{
 				mapHeighttemp = "200";
 			}
 			
+			//default brightness is 10000
 			if(mapBrighttemp == "")
 			{
 				mapBrighttemp = "10000";
 			}
 			
+			//Default music is level11
 			if(mapAudiotemp == "")
 			{
 				mapAudiotemp = "level11";
@@ -1856,11 +2113,12 @@ public class Display extends JFrame implements ActionListener
         			
         			save.write(m.blockHeight+":"+m.blockID+":"
         			+m.itemID+":"+tempRotation+":"
-        					+m.itemActivationID+",");
+        					+m.itemActivationID+":"+m.audioQueue+
+        					":"+m.blockY+":"+m.doorRaiseHeight+",");
         		}
         		
         		//End of row of blocks
-        		save.write("0:100:0:0:0,");
+        		save.write("0:100:0:0:0:0:0:0,");
         		save.newLine();
         	}
         	
@@ -1911,6 +2169,10 @@ public class Display extends JFrame implements ActionListener
 			//First Line of file should be name of map
 			mapName.setText(sc.nextLine());
 			
+		   /*
+		    * Try to load map settings, but if they fail
+		    * then just don't worry about it.
+		    */
 			try
 			{
 				String mapSettings = sc.nextLine();
@@ -1947,9 +2209,45 @@ public class Display extends JFrame implements ActionListener
 					{
 						MapBlock thisBlock = new MapBlock(r, c);
 						
-						thisBlock.blockHeight = Integer.parseInt(values[0]);
-						thisBlock.blockID = Integer.parseInt(values[1]);
-						thisBlock.itemID = Integer.parseInt(values[2]);
+					   /*
+					    * Try to set the blocks height from the file,
+					    * but if it fails, then set the blocks height to being 0
+					    * by default.
+					    */
+						try
+						{
+							thisBlock.blockHeight = Integer.parseInt(values[0]);
+						}
+						catch(Exception e)
+						{
+							thisBlock.blockHeight = 0;
+						}
+						
+					   /*
+					    * Try to load the blocks ID, but if it doesn't work
+					    * because it is an earlier version map, or because
+					    * something just fails, then set it to 0.
+					    */
+						try
+						{
+							thisBlock.blockID = Integer.parseInt(values[1]);
+						}
+						catch(Exception e)
+						{
+							thisBlock.blockID = 0;
+						}
+						
+						//Try to load the items ID. If it is not there either
+						//because of error or trying to load an earlier versions
+						//map, then set it to 0
+						try
+						{
+							thisBlock.itemID = Integer.parseInt(values[2]);
+						}
+						catch(Exception e)
+						{
+							thisBlock.itemID = 0;
+						}
 						
 					   /*
 					    * Try to set itemRotation from the map file, but
@@ -1979,6 +2277,51 @@ public class Display extends JFrame implements ActionListener
 						catch (Exception e)
 						{
 							thisBlock.itemActivationID = 0;
+						}
+						
+					   /*
+					    * Try to set audioQueue from the map file, but
+					    * if it is non-exsistant because it is an older
+					    * map file, then just set it to a default of 0.
+					    */
+						try
+						{
+							thisBlock.audioQueue 
+								= values[5];
+						}
+						catch (Exception e)
+						{
+							thisBlock.audioQueue = "";
+						}
+						
+					   /*
+					    * Try to set itemActID from the map file, but
+					    * if it is non-exsistant because it is an older
+					    * map file, then just set it to a default of 0.
+					    */
+						try
+						{
+							thisBlock.blockY 
+								= Integer.parseInt(values[6]);
+						}
+						catch (Exception e)
+						{
+							thisBlock.blockY = 0;
+						}
+						
+					   /*
+					    * Try to set doorRaiseHeight from the map file, but
+					    * if it is non-exsistant because it is an older
+					    * map file, then just set it to a default of 0.
+					    */
+						try
+						{
+							thisBlock.doorRaiseHeight 
+								= Integer.parseInt(values[7]);
+						}
+						catch (Exception e)
+						{
+							thisBlock.doorRaiseHeight = 0;
 						}
 						
 						//Set tooltip
@@ -2365,31 +2708,44 @@ public class Display extends JFrame implements ActionListener
 			previousPage.setVisible(true);
 		}
 		
-		currentWall.setVisible(false);
-		currentEntity.setVisible(false);
-		itemRotation.setVisible(false);
-		itemRotationTitle.setVisible(false);
-		itemActID.setVisible(false);
-		itemActIDTitle.setVisible(false);
-		mapDimensions.setVisible(true);
-		mapName.setVisible(true);
-		mapAudio.setVisible(true);
-		mapNum.setVisible(true);
-		mapHeight.setVisible(true);
-		mapBrightness.setVisible(true);
-		mapDimensionTitle.setVisible(true);
-		mapNameTitle.setVisible(true);
-		mapAudioTitle.setVisible(true);
-		mapNumTitle.setVisible(true);
-		mapHeightTitle.setVisible(true);
-		mapBrightnessTitle.setVisible(true);
-		mapFloor.setVisible(true);
-		mapCeiling.setVisible(true);
-		floorModeButton.setVisible(true);
-		mapFloorTitle.setVisible(true);
-		mapCeilingTitle.setVisible(true);
-		heightTitle.setVisible(false);
-		height.setVisible(false);
+		try
+		{
+			currentWall.setVisible(false);
+			currentEntity.setVisible(false);
+			itemRotation.setVisible(false);
+			itemRotationTitle.setVisible(false);
+			itemActID.setVisible(false);
+			itemActIDTitle.setVisible(false);
+			mapDimensions.setVisible(true);
+			mapName.setVisible(true);
+			mapAudio.setVisible(true);
+			mapNum.setVisible(true);
+			mapHeight.setVisible(true);
+			mapBrightness.setVisible(true);
+			mapDimensionTitle.setVisible(true);
+			mapNameTitle.setVisible(true);
+			mapAudioTitle.setVisible(true);
+			mapNumTitle.setVisible(true);
+			mapHeightTitle.setVisible(true);
+			mapBrightnessTitle.setVisible(true);
+			mapFloor.setVisible(true);
+			mapCeiling.setVisible(true);
+			floorModeButton.setVisible(true);
+			mapFloorTitle.setVisible(true);
+			mapCeilingTitle.setVisible(true);
+			heightTitle.setVisible(false);
+			height.setVisible(false);
+			audioActivation.setVisible(false);
+			doorRaise.setVisible(false);
+			wallY.setVisible(false);
+			audioActivationTitle.setVisible(false);
+			doorRaiseTitle.setVisible(false);
+			wallYTitle.setVisible(false);
+		}
+		catch(Exception e)
+		{
+			
+		}
 		
 		
 		for(int i = 0; i < wallTypes.length; i++)

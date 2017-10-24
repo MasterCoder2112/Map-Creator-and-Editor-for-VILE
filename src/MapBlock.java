@@ -34,6 +34,12 @@ public class MapBlock extends JButton
 	public int itemID = 0;
 	public int itemActivationID = 0;
 	public int blockHeight = 0;
+	public int blockY = 0;
+	public int doorRaiseHeight = 3;
+	
+	//Does an item on this block activate a sound queue?
+	//If so, the sound clips name will be here.
+	public String audioQueue = "";
 	
 	//Which direction item/enemy is rotated
 	public int itemRotation = 0;
